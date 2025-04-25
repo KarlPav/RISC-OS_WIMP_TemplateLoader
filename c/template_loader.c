@@ -56,22 +56,7 @@ template_entry **load_templates(const char *filename)
         if (pError)
         {
             debug_printf("Error probing template: %s\n", pError->errmess);
-            if (i > 0)
-            {
-                // Free previously allocated memory
-                for (int j = 0; j < i; j++)
-                {
-                    free(pTemplates[j]->window_name);
-                    free(pTemplates[j]->window_def);
-                    free(pTemplates[j]);
-                }
-                free(pTemplates);
-            }
-            else
-            {
-                free(pTemplates);
-            }
-            break;
+            goto cleanup;
         }
 
         if (context_out == 0)
@@ -86,46 +71,13 @@ template_entry **load_templates(const char *filename)
         if (!pWindow_definition)
         {
             debug_printf("Memory allocation failed.\n");
-            if (i > 0)
-            {
-                // Free previously allocated memory
-                for (int j = 0; j < i; j++)
-                {
-                    free(pTemplates[j]->window_name);
-                    free(pTemplates[j]->window_def);
-                    free(pTemplates[j]);
-                }
-                free(pTemplates);
-            }
-            else
-            {
-                free(pTemplates);
-            }
-            break;
+            goto cleanup;
         }
         pInd_data = malloc(ind_size);
         if (!pInd_data && ind_size > 0)
         {
             debug_printf("Memory allocation for icon data failed.\n");
-            if (pWindow_definition)
-            free(pWindow_definition);
-
-            if (i > 0)
-            {
-                // Free previously allocated memory
-                for (int j = 0; j < i; j++)
-                {
-                    free(pTemplates[j]->window_name);
-                    free(pTemplates[j]->window_def);
-                    free(pTemplates[j]);
-                }
-                free(pTemplates);
-            }
-            else
-            {
-                free(pTemplates);
-            }
-            break;
+            goto cleanup;
         }
 
         // Load the window template
@@ -134,25 +86,7 @@ template_entry **load_templates(const char *filename)
         if (pError)
         {
             debug_printf("Failed to load template: %s\n", pError->errmess);
-            free(pWindow_definition);
-            free(pInd_data);
-
-            if (i > 0)
-            {
-                // Free previously allocated memory
-                for (int j = 0; j < i; j++)
-                {
-                    free(pTemplates[j]->window_name);
-                    free(pTemplates[j]->window_def);
-                    free(pTemplates[j]);
-                }
-                free(pTemplates);
-            }
-            else
-            {
-                free(pTemplates);
-            }
-            break;
+            goto cleanup;
         }
 
         // Allocate memory for template entry
@@ -160,119 +94,69 @@ template_entry **load_templates(const char *filename)
         if (!pTemplates_tmp)
         {
             debug_printf("Memory allocation for template entry failed.\n");
-            free(pWindow_definition);
-            free(pInd_data);
-            // Free previously allocated memory
-            if (i > 0)
-            {
-                for (int j = 0; j < i; j++)
-                {
-                    free(pTemplates[j]->window_name);
-                    free(pTemplates[j]->window_def);
-                    free(pTemplates[j]);
-                }
-                free(pTemplates);
-            }
-            else
-            {
-                free(pTemplates);
-            }
-            break;
+            goto cleanup;
         }
 
-            pTemplates = pTemplates_tmp;
-            pTemplates_tmp = NULL;
-            pTemplates[i] = malloc(sizeof(template_entry));
-            if (!pTemplates[i])
-            {
-                debug_printf("Memory allocation for template entry failed.\n");
-                free(pWindow_definition);
-                free(pInd_data);
-                // Free previously allocated memory
-                if (i > 0)
-                {
-                    for (int j = 0; j < i; j++)
-                    {
-                        free(pTemplates[j]->window_name);
-                        free(pTemplates[j]->window_def);
-                        free(pTemplates[j]);
-                    }
-                    free(pTemplates);
-                }
-                else
-                {
-                    free(pTemplates);
-                }
-                break;
-            }
+        pTemplates = pTemplates_tmp;
+        pTemplates_tmp = NULL;
+        pTemplates[i] = malloc(sizeof(template_entry));
+        if (!pTemplates[i])
+        {
+            debug_printf("Memory allocation for template entry failed.\n");
+            goto cleanup;
+        }
 
-            pTemplates[i]->window_name = malloc(strlen(name) + 1);
-            if (!pTemplates[i]->window_name)
-            {
-                debug_printf("Memory allocation for window name failed.\n");
-                free(pWindow_definition);
-                free(pInd_data);
-                // Free previously allocated memory
-                if (i > 0)
-                {
-                    for (int j = 0; j < i; j++)
-                    {
-                        free(pTemplates[j]->window_name);
-                        free(pTemplates[j]->window_def);
-                        free(pTemplates[j]);
-                    }
-                    free(pTemplates);
-                }
-                else
-                {
-                    free(pTemplates[i]);
-                    free(pTemplates);
-                }
-                break;
-            }
-            strcpy(pTemplates[i]->window_name, name);
-            pTemplates[i]->window_def = malloc(sizeof(pWindow_definition));
-            if (!pTemplates[i]->window_def)
-            {
-                debug_printf("Memory allocation for window definition failed.\n");
-                free(pWindow_definition);
-                free(pInd_data);
-                // Free previously allocated memory
-                if (i > 0)
-                {
-                    for (int j = 0; j < i; j++)
-                    {
-                        free(pTemplates[j]->window_name);
-                        free(pTemplates[j]->window_def);
-                        free(pTemplates[j]);
-                    }
-                    free(pTemplates);
-                }
-                else
-                {
-                    free(pTemplates[i]->window_name);
-                    free(pTemplates[i]);
-                    free(pTemplates);
-                }
-                break;
-            }
-            pTemplates[i]->window_def = pWindow_definition;
-            pWindow_definition = NULL; // Prevent double free
-            free(pInd_data);
-            pInd_data = NULL;
+        pTemplates[i]->window_name = malloc(strlen(name) + 1);
+        if (!pTemplates[i]->window_name)
+        {
+            debug_printf("Memory allocation for window name failed.\n");
+            goto cleanup;
+        }
 
-            debug_printf("Template saved to array position %d - \n", i);
-            debug_printf("Template name: %s\n", pTemplates[i]->window_name);
-            debug_printf("Window definition, %p\n", (void *)pTemplates[i]->window_def);
+        strcpy(pTemplates[i]->window_name, name);
+        pTemplates[i]->window_def = malloc(sizeof(pWindow_definition));
+        if (!pTemplates[i]->window_def)
+        {
+            debug_printf("Memory allocation for window definition failed.\n");
+            goto cleanup;
+        }
 
-            strcpy(name, "*"); // Wildcard to match all templates
-            context = context_out;
+        pTemplates[i]->window_def = pWindow_definition;
+        pWindow_definition = NULL; // Prevent double free
+        free(pInd_data);
+        pInd_data = NULL;
 
-            i++;
-        
+        debug_printf("Template saved to array position %d - \n", i);
+        debug_printf("Template name: %s\n", pTemplates[i]->window_name);
+        debug_printf("Window definition, %p\n", (void *)pTemplates[i]->window_def);
+
+        strcpy(name, "*"); // Wildcard to match all templates
+        context = context_out;
+
+        i++;
     }
 
-        xwimp_close_template();
+    xwimp_close_template();
 
-        return pTemplates;
-    };
+    return pTemplates;
+
+cleanup:
+    // Centralized cleanup
+    if (pTemplates)
+    {
+        for (int j = 0; j < i; j++)
+        {
+            if (pTemplates[j])
+            {
+                free(pTemplates[j]->window_name);
+                free(pTemplates[j]->window_def);
+                free(pTemplates[j]);
+            }
+        }
+        free(pTemplates);
+    }
+    free(pWindow_definition);
+    free(pInd_data);
+    xwimp_close_template();
+    return NULL;
+};
