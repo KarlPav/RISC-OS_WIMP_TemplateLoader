@@ -14,6 +14,11 @@ Note that when a template is found its name is returned in the "name" argument
 thats why its reset back to "*"
 The function returns a struct that holds the template name and window definition*/
 
+/*Eventually I will try to make a "wimp_window" class that:
+contains all the window and icon defintions indexed to name
+has functions to return current window and icon states
+as well as set states*/
+
 template_entry **load_templates(const char *filename)
 {
     os_error *pError;
@@ -112,8 +117,9 @@ template_entry **load_templates(const char *filename)
             debug_printf("Memory allocation for window name failed.\n");
             goto cleanup;
         }
-
+        name[strcspn(name, "\r\n")] = '\0'; // Remove any trailing newline characters
         strcpy(pTemplates[i]->window_name, name);
+
         pTemplates[i]->window_def = malloc(sizeof(pWindow_definition));
         if (!pTemplates[i]->window_def)
         {
@@ -125,10 +131,6 @@ template_entry **load_templates(const char *filename)
         pWindow_definition = NULL; // Prevent double free
         free(pInd_data);
         pInd_data = NULL;
-
-        debug_printf("Template saved to array position %d - \n", i);
-        debug_printf("Template name: %s\n", pTemplates[i]->window_name);
-        debug_printf("Window definition, %p\n", (void *)pTemplates[i]->window_def);
 
         strcpy(name, "*"); // Wildcard to match all templates
         context = context_out;
